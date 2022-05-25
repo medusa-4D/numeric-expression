@@ -1,38 +1,40 @@
-import wave
+import os
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = './numeric-face-611c5ff144e9.json'
+
 import json
-from tqdm import tqdm
+import wave
 from pathlib import Path
-from vosk import Model, KaldiRecognizer
+from google.cloud import speech
 
-model_path = "models/vosk-model-en-us-0.22"
-model = Model(model_path)
-words = ['huge', 'tiny']
-
+client = speech.SpeechClient()
 wavs = sorted(list(Path('.').glob('data/wavs/*.wav')))
 for wav in wavs:
-    print(wav)
-    wf = wave.open(str(wav), "rb")
-    frame_rate = wf.getframerate()
-    n_frames = wf.getnframes()
+
+    audio = wave.open(str(wav), 'rb')
+    frame_rate = audio.getframerate()
     
-    rec = KaldiRecognizer(model, frame_rate)#, words)
-    rec.SetWords(True)
+    config = speech.RecognitionConfig(
+        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+        sample_rate_hertz=frame_rate,
+        language_code="en-US",
+        enable_word_time_offsets=True,
+    )
 
-    results = []
-    n_iters = n_frames // 4000
-
-    for i in tqdm(range(n_iters)):
-        data = wf.readframes(4000)
-        
-        if len(data) == 0:
+    minute = 0
+    while True:
+        contents = audio.readframes(frame_rate * 60)
+        if not contents:
             break
+
+        audio_to_process = speech.RecognitionAudio(content=contents)
+        response = client.recognize(config=config, audio=audio_to_process)
+        response = type(response).to_json(response)
         
-        if rec.AcceptWaveform(data):
-            res = json.loads(rec.Result())
-            det_words = [r['word'] for r in res['result']]
-            print(det_words)
-            if 'huge' in det_words:
-                print(res)
-            
-    print(rec.FinalResult())    
-    wf.close()
+        response = json.loads(response)
+        f_out = wav.parents[1] / 'speech'/ (str(wav.stem) + f'_minute-{minute}.json')
+
+        with open(f_out, 'w') as f_out_json:
+            json.dump(response, f_out_json, indent=4)
+
+        minute += 1
+    exit()
