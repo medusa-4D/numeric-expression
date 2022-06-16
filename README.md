@@ -1,6 +1,6 @@
 # medusa-numeric-face
 
-Code for the 'numeric face' project. 
+Code for the 'numeric-expression' project. The dataset with video URLs (in `data/data.csv`) was composed by [Greg Woodin and colleagues (2020)](https://doi.org/10.1371/journal.pone.0242142) and is available [here](https://osf.io/dncjg/).
 
 ## Dataset curation
 
